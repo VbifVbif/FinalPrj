@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting System</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.3.6/dist/web3.min.js"></script>
+</head>
+<body>
+
+<h1>Voting System</h1>
+
+<div id="candidates-list">
+    <h2>Candidates:</h2>
+    <ul id="candidates"></ul>
+</div>
+
+<div id="voting-section">
+    <h2>Vote for a Candidate:</h2>
+    <select id="candidateSelect"></select>
+    <button onclick="vote()">Vote</button>
+</div>
+
+<div id="winner-section">
+    <h2>Winner:</h2>
+    <p id="winner"></p>
+</div>
+
+<script>
+        
+        const web3 = new Web3(window.ethereum);
+
+// Request account access if needed
+window.ethereum.enable().then(function(accounts) {
+    // Set the default account for transactions
+    web3.eth.defaultAccount = accounts[0];
+});
+
+    // Set the contract address and abi
+    const contractAddress = "0x5FD6eB55D12E759a21C09eF703fe0CBa1DC9d88D";
+    const contractAbi = [
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_candidateId",
+                "type": "uint256"
+            }
+        ],
+        "name": "vote",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "candidateId",
+                "type": "uint256"
+            }
+        ],
+        "name": "VotedEvent",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "candidates",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+            },
+            {
+                "internalType": "uint256",
+                "name": "voteCount",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "candidatesCount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getWinner",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "hasVoted",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+];
+
+    // Instantiate the contract
+    const votingSystemContract = new web3.eth.Contract(contractAbi, contractAddress);
+
+    // Load candidates and populate the UI
+    async function loadCandidates() {
+        const candidatesCount = await votingSystemContract.methods.candidatesCount().call();
+        const candidatesList = document.getElementById("candidates");
+
+        for (let i = 1; i <= candidatesCount; i++) {
+            const candidate = await votingSystemContract.methods.candidates(i).call();
+            const li = document.createElement("li");
+            li.textContent = `${candidate.name} - Votes: ${candidate.voteCount}`;
+            candidatesList.appendChild(li);
+
+            // Populate the voting dropdown
+            const select = document.getElementById("candidateSelect");
+            const option = document.createElement("option");
+            option.value = candidate.id;
+            option.textContent = candidate.name;
+            select.appendChild(option);
+        }
+    }
+
+    // Load the winner and update the UI
+    async function loadWinner() {
+        const winner = await votingSystemContract.methods.getWinner().call();
+        const winnerElement = document.getElementById("winner");
+        winnerElement.textContent = winner;
+    }
+
+    // Vote function
+   async function vote() {
+    const candidateId = document.getElementById("candidateSelect").value;
+
+    try {
+        await votingSystemContract.methods.vote(candidateId).send({ from: web3.eth.defaultAccount });
+        // Reload candidates and winner after voting
+        loadCandidates();
+        loadWinner();
+    } catch (error) {
+        console.error("Error voting:", error);
+    }
+}
+
+   
+
+    // Initial load
+    loadCandidates();
+    loadWinner();
+</script>
+
+</body>
+</html>
